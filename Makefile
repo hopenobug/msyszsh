@@ -16,7 +16,6 @@ $(TARGET): $(SRC)
 # The first command is for MSYS (//switch), the second for cmd.exe (/switch);
 # whichever applies wins.
 fix-integrity: $(TARGET)
-	@echo "icacls $(TARGET) /setintegritylevel Medium"
 	@icacls "$(TARGET)" //setintegritylevel Medium >/dev/null 2>&1 \
 		|| icacls "$(TARGET)" /setintegritylevel Medium >/dev/null 2>&1 \
 		|| echo "warning: could not set integrity level, see README"
