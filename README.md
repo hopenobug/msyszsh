@@ -30,9 +30,13 @@ export MSYS2_ROOT=/c/msys64
 需要 MinGW-w64 gcc 和 make（MSYS2 的 `mingw64` 工具链或 <https://www.mingw-w64.org> 均可）。
 
 ```sh
-make            # 生成 msyszsh.exe
+make            # 生成 msyszsh.exe，并自动修掉低完整性标签
 make clean
 ```
+
+`make` 编译完会自动执行 `icacls msyszsh.exe /setintegritylevel Medium`（原因见下方
+「常见问题」）。即便只是重复 `make`、没有重新编译，这一步也会再跑一次，因为新生成的
+文件会重新继承目录上的低完整性标签。
 
 默认参数 `-O2 -Wall -Wextra`，链接 `-lshell32 -ladvapi32`。
 注意不能加 `-municode`（会要求 `wWinMain`）。
@@ -86,9 +90,11 @@ msyszsh.exe --help
 ```sh
 # 查看
 icacls msyszsh.exe
-# 修复（每次重新编译后新文件会重新继承该标签，需要再跑一次）
+# 修复
 make fix-integrity
 ```
+
+`make` 已经自动做了这件事，通常不用手动跑。
 
 或者把 exe 编译/复制到没有低完整性标签的目录。程序启动时也会自检，处于低完整性级别会直接打印这条修复提示。
 
