@@ -225,6 +225,36 @@ static void warn_if_low_il(void)
     CloseHandle(tok);
 }
 
+/* Switch the console into VT mode before the shell starts. The console mode is
+   a property of the console, not of this process, so the shell inherits it:
+   MSYS2's runtime then treats the console as a VT terminal and passes escape
+   sequences through both ways instead of swallowing the ESC, which is what
+   leaves a literal "[200~" in the input line after a bracketed paste.
+   ENABLE_VIRTUAL_TERMINAL_INPUT additionally makes the console deliver input as
+   VT sequences (ESC[200~ / ESC[201~) rather than cooked key events.
+   Returns the previous mode, or 0 when it could not be changed. */
+static DWORD enable_vt_mode(DWORD std_handle, DWORD flag)
+{
+    HANDLE h = GetStdHandle(std_handle);
+    DWORD mode = 0;
+
+    if (!h || h == INVALID_HANDLE_VALUE || !GetConsoleMode(h, &mode))
+        return 0;
+    if (mode & flag)
+        return 0; /* already on, nothing to restore */
+    if (!SetConsoleMode(h, mode | flag))
+        return 0; /* not supported by this console (e.g. legacy console) */
+    return mode;
+}
+
+static void restore_console_mode(DWORD std_handle, DWORD mode)
+{
+    HANDLE h = GetStdHandle(std_handle);
+
+    if (mode && h && h != INVALID_HANDLE_VALUE)
+        SetConsoleMode(h, mode);
+}
+
 static void print_help(void)
 {
     eputs(L"Usage: msyszsh [options] [shell arguments]\n"
@@ -259,6 +289,8 @@ int main(void)
     wstr cmdline;
     UINT old_cp_in;
     UINT old_cp_out;
+    DWORD old_out_mode;
+    DWORD old_in_mode;
     STARTUPINFOW si;
     PROCESS_INFORMATION pi;
     DWORD exit_code = 0;
@@ -271,6 +303,8 @@ int main(void)
     old_cp_in = GetConsoleCP();
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
+    old_out_mode = enable_vt_mode(STD_OUTPUT_HANDLE, ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    old_in_mode = enable_vt_mode(STD_INPUT_HANDLE, ENABLE_VIRTUAL_TERMINAL_INPUT);
 
     w_init(&extra);
 
@@ -363,6 +397,8 @@ int main(void)
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
 
+    restore_console_mode(STD_INPUT_HANDLE, old_in_mode);
+    restore_console_mode(STD_OUTPUT_HANDLE, old_out_mode);
     SetConsoleOutputCP(old_cp_out);
     SetConsoleCP(old_cp_in);
     LocalFree(argv);
