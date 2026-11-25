@@ -57,6 +57,34 @@ msyszsh.exe -shell bash -c 'ls'
 msyszsh.exe --help
 ```
 
+### Use it as the shell of a terminal emulator
+
+Because it is a single exe that starts the login shell in the current console, it
+works as the "shell" / "command line" of any terminal emulator that lets you set
+one (Windows Terminal, ConEmu, Tabby, VS Code terminals, …). No `cmd.exe` wrapper
+and no `chcp` needed.
+
+Windows Terminal — add to the `profiles.list` array of `settings.json`:
+
+```json
+{
+    "name": "MSYS2 zsh",
+    "commandline": "C:\\tools\\msyszsh.exe",
+    "startingDirectory": "%USERPROFILE%",
+    "icon": "C:\\msys64\\msys2.ico"
+}
+```
+
+Notes:
+
+- Use the full path to the exe, and double the backslashes (JSON).
+- `MSYS2_ROOT` must be set in the environment the terminal inherits (e.g. a user
+  environment variable), since the emulator does not read your shell's `rc` files.
+- Extra arguments can be appended in `commandline`, e.g.
+  `"C:\\tools\\msyszsh.exe" -shell bash`.
+- `startingDirectory` is honoured: the shell starts in that directory, and
+  `Ctrl+C`/exit codes behave like any other shell profile.
+
 ### Options
 
 | Option | Meaning |

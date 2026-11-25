@@ -52,6 +52,33 @@ msyszsh.exe -shell bash -c 'ls'
 msyszsh.exe --help
 ```
 
+### 作为终端模拟器的 shell 使用
+
+本程序是单个 exe，直接在**当前**控制台里启动登录 shell，因此可以直接填进任何
+允许自定义 shell / 命令行的终端模拟器（Windows Terminal、ConEmu、Tabby、VS Code
+终端等），不需要 `cmd.exe` 包装，也不需要 `chcp`。
+
+Windows Terminal：在 `settings.json` 的 `profiles.list` 里加一项：
+
+```json
+{
+    "name": "MSYS2 zsh",
+    "commandline": "C:\\tools\\msyszsh.exe",
+    "startingDirectory": "%USERPROFILE%",
+    "icon": "C:\\msys64\\msys2.ico"
+}
+```
+
+注意：
+
+- `commandline` 用 exe 的绝对路径，JSON 里反斜杠要写两遍。
+- `MSYS2_ROOT` 必须设在终端进程能继承到的环境里（例如用户环境变量），
+  终端不会去读 shell 的 `rc` 文件。
+- 可以在 `commandline` 后面追加参数，例如
+  `"C:\\tools\\msyszsh.exe" -shell bash`。
+- `startingDirectory` 会生效：shell 在该目录启动；`Ctrl+C`、退出码等行为与普通
+  shell 配置一致。
+
 ### 选项
 
 | 选项 | 含义 |
