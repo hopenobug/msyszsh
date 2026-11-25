@@ -2,8 +2,8 @@
 
 [English](README.md) | 简体中文
 
-`msys2_shell.cmd` 的最小 C 替代品：在当前控制台里直接启动 MSYS2 的登录 shell（默认 zsh），
-不用 cmd.exe、不弹新窗口。
+> `msys2_shell.cmd` 的最小 C 替代品：在当前控制台里直接启动 MSYS2 的登录 shell
+> （默认 zsh），不用 cmd.exe、不弹新窗口。
 
 等价于下面两行，但只需要一个 exe、不依赖 cmd 的解析和引号规则：
 

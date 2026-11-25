@@ -2,8 +2,8 @@
 
 English | [简体中文](README.zh-CN.md)
 
-A minimal C replacement for `msys2_shell.cmd`: it starts the MSYS2 login shell
-(zsh by default) directly in the current console — no `cmd.exe`, no new window.
+> A minimal C replacement for `msys2_shell.cmd`: run the MSYS2 login shell (zsh
+> by default) directly in the current console — no `cmd.exe`, no new window.
 
 It is equivalent to the two lines below, but needs only one exe and does not rely
 on `cmd.exe` parsing or its quoting rules:
