@@ -1,10 +1,11 @@
 /*
- * msyszsh.exe - 等价于:
+ * msyszsh.exe - equivalent to:
  *   chcp 65001
  *   <MSYS2_ROOT>\msys2_shell.cmd -defterm -no-start -use-full-path -here -mingw64 -shell zsh %*
  *
- * 在当前控制台里以登录 shell 方式启动 MSYS2 的 zsh，并转发全部参数。
- * MSYS2 安装位置必须由环境变量 MSYS2_ROOT 给出（指向含 usr\bin\msys-2.0.dll 的目录）。
+ * Starts MSYS2's zsh as a login shell in the current console and forwards every
+ * argument to it. The MSYS2 installation must be given by the MSYS2_ROOT
+ * environment variable (the directory containing usr\bin\msys-2.0.dll).
  */
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -14,7 +15,7 @@
 #include <string.h>
 #include <wchar.h>
 
-/* ---------- 极简宽字符动态字符串 ---------- */
+/* ---------- minimal dynamic wide string ---------- */
 
 typedef struct {
     wchar_t *p;
@@ -63,7 +64,8 @@ static void w_add(wstr *s, const wchar_t *t)
     s->p[s->len] = L'\0';
 }
 
-/* 按 MSVCRT 规则给参数加引号，然后拼到命令行（带前导空格） */
+/* quote one argument the way MSVCRT does, then append it to a command line
+   (with a leading space) */
 static void w_add_quoted_arg(wstr *s, const wchar_t *arg)
 {
     int need = (*arg == L'\0');
@@ -111,7 +113,7 @@ static void w_add_quoted_arg(wstr *s, const wchar_t *arg)
     w_addc(s, L'"');
 }
 
-/* ---------- 错误输出（直接走控制台 UTF-8） ---------- */
+/* ---------- error output (console, UTF-8) ---------- */
 
 static void eputs(const wchar_t *msg)
 {
@@ -139,7 +141,7 @@ static void die(const wchar_t *msg)
     exit(2);
 }
 
-/* ---------- 路径工具 ---------- */
+/* ---------- path helpers ---------- */
 
 static int file_exists(const wchar_t *path)
 {
@@ -147,7 +149,7 @@ static int file_exists(const wchar_t *path)
     return attr != INVALID_FILE_ATTRIBUTES && !(attr & FILE_ATTRIBUTE_DIRECTORY);
 }
 
-/* 合法 MSYS2 根目录: 存在 usr\bin\msys-2.0.dll */
+/* a valid MSYS2 root contains usr\bin\msys-2.0.dll */
 static int root_ok(const wchar_t *root)
 {
     wstr p;
@@ -160,7 +162,7 @@ static int root_ok(const wchar_t *root)
     return ok;
 }
 
-/* 去掉末尾反斜杠/斜杠 */
+/* strip trailing backslash or slash */
 static void trim_sep(wstr *s)
 {
     while (s->len > 1 && (s->p[s->len - 1] == L'\\' || s->p[s->len - 1] == L'/')) {
@@ -168,7 +170,7 @@ static void trim_sep(wstr *s)
     }
 }
 
-/* MSYS2 根目录只从环境变量 MSYS2_ROOT 取，必须存在且通过校验 */
+/* the MSYS2 root comes from MSYS2_ROOT only; it must be set and pass the check */
 static void find_root(wstr *out)
 {
     wchar_t *env = _wgetenv(L"MSYS2_ROOT");
@@ -185,7 +187,7 @@ static void find_root(wstr *out)
     trim_sep(out);
 }
 
-/* ---------- Ctrl+C: 让子进程处理，本进程在等待期间不退出 ---------- */
+/* ---------- Ctrl+C: let the child handle it, this process keeps waiting ---------- */
 
 static BOOL WINAPI ctrl_handler(DWORD type)
 {
@@ -198,9 +200,10 @@ static BOOL WINAPI ctrl_handler(DWORD type)
     }
 }
 
-/* 低完整性级别(Low IL)的进程无法在 \BaseNamedObjects 中创建对象，msys-2.0 在
-   初始化时会以 STATUS_ACCESS_DENIED(0xC0000022) 崩溃。典型诱因: exe 所在目录带
-   "Low Mandatory Level" 标签，进程会被降到 Low IL。这里提前给出可操作的提示。 */
+/* A low integrity level process may not create objects under \BaseNamedObjects,
+   so msys-2.0 dies during initialisation with STATUS_ACCESS_DENIED (0xC0000022).
+   Typical cause: the directory holding the exe carries a "Low Mandatory Level"
+   label, which demotes the process to low IL. Warn up front with a fix. */
 static void warn_if_low_il(void)
 {
     HANDLE tok;
@@ -296,7 +299,7 @@ int main(void)
         } else if (!wcscmp(a, L"-full-path") || !wcscmp(a, L"-use-full-path")) {
             full_path = 1;
         } else if (!wcscmp(a, L"-here") || !wcscmp(a, L"-defterm") || !wcscmp(a, L"-no-start")) {
-            /* 行为已内置，忽略 */
+            /* behaviour is built in, nothing to do */
         } else if (!wcscmp(a, L"--")) {
             for (++i; i < argc; ++i)
                 w_add_quoted_arg(&extra, argv[i]);
@@ -308,7 +311,7 @@ int main(void)
 
     find_root(&root);
 
-    /* 拼 shell 绝对路径: <root>\usr\bin\<shell>.exe */
+    /* absolute path of the shell: <root>\usr\bin\<shell>.exe */
     w_init(&shellpath);
     w_add(&shellpath, root.p);
     w_add(&shellpath, L"\\usr\\bin\\");
@@ -323,13 +326,13 @@ int main(void)
         die(msg.p);
     }
 
-    /* 环境变量 */
+    /* environment */
     SetEnvironmentVariableW(L"MSYSTEM", msystem);
     if (full_path)
         SetEnvironmentVariableW(L"MSYS2_PATH_TYPE", L"inherit");
     SetEnvironmentVariableW(L"CHERE_INVOKING", L"enabled_from_arguments");
 
-    /* 命令行: "<shell>" -l [args...] */
+    /* command line: "<shell>" -l [args...] */
     w_init(&cmdline);
     w_add_quoted_arg(&cmdline, shellpath.p);
     w_add(&cmdline, L" -l");

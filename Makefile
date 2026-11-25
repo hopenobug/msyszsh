@@ -10,16 +10,18 @@ all: $(TARGET) fix-integrity
 $(TARGET): $(SRC)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
-# 去掉继承来的低完整性标签，否则 MSYS2 运行时初始化会失败（见 README）。
-# 每次编译后新文件会重新继承该标签，所以 all 每次都跑一遍。
-# 前半句给 MSYS(//switch)，后半句给 cmd.exe(/switch)，任一生效即可。
+# Strip the inherited low integrity label, otherwise the MSYS2 runtime fails to
+# initialise (see README). A freshly built file inherits the label again, hence
+# this runs on every `make`.
+# The first command is for MSYS (//switch), the second for cmd.exe (/switch);
+# whichever applies wins.
 fix-integrity: $(TARGET)
 	@echo "icacls $(TARGET) /setintegritylevel Medium"
 	@icacls "$(TARGET)" //setintegritylevel Medium >/dev/null 2>&1 \
 		|| icacls "$(TARGET)" /setintegritylevel Medium >/dev/null 2>&1 \
 		|| echo "warning: could not set integrity level, see README"
 
-# 需要 MSYS2_ROOT 已设置
+# requires MSYS2_ROOT to be set
 run:
 	./$(TARGET)
 
